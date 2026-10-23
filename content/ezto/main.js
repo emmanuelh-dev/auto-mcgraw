@@ -190,6 +190,7 @@
   const bar = toolbar.create({ variant: "ezto", onToggle: toggle });
 
   function render() {
+    AutoMcGraw.assignmentQueue.changed();
     bar.render({
       running: session.isRunning(),
       assistantId: currentSettings.aiModel,
@@ -225,6 +226,7 @@
     });
     currentSettings = await settings.load();
     render();
+    await AutoMcGraw.assignmentQueue.attach(session, isQuizPage);
   }
 
   init().catch((error) => console.error("[Auto-McGraw]", error));

@@ -232,6 +232,7 @@
   const bar = toolbar.create({ variant: "smartbook", onToggle: toggle });
 
   function render() {
+    AutoMcGraw.assignmentQueue.changed();
     bar.render({
       running: session.isRunning(),
       assistantId: currentSettings.aiModel,
@@ -271,6 +272,7 @@
     });
     currentSettings = await settings.load();
     render();
+    await AutoMcGraw.assignmentQueue.attach(session, () => Boolean(document.querySelector("awd-header")));
 
     const job = await doubleCredit.claim();
     if (job) await doubleCredit.answerAsDuplicate(job, confidenceSelector());

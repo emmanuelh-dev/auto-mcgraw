@@ -5,6 +5,7 @@
   "description": "Sends McGraw Hill SmartBook questions to an AI assistant (ChatGPT, Gemini or DeepSeek) and fills in its answers.",
   "permissions": ["tabs", "scripting", "storage"],
   "host_permissions": [
+    "https://newconnect.mheducation.com/*",
     "https://learning.mheducation.com/*",
     "https://ezto.mheducation.com/*",
     "https://chatgpt.com/*",
@@ -24,6 +25,15 @@
   },
   "content_scripts": [
     {
+      "matches": ["https://newconnect.mheducation.com/student/class/section/*"],
+      "js": [
+        "shared/namespace.js",
+        "shared/messaging.js",
+        "shared/wait.js",
+        "content/connect/main.js"
+      ]
+    },
+    {
       "matches": ["https://learning.mheducation.com/static/awd/*"],
       "js": [
         "shared/namespace.js",
@@ -34,6 +44,7 @@
         "shared/dom.js",
         "content/mhe/text.js",
         "content/mhe/automation.js",
+        "content/mhe/queue.js",
         "content/mhe/toolbar.js",
         "content/smartbook/matching.js",
         "content/smartbook/questions.js",
@@ -53,6 +64,7 @@
         "shared/dom.js",
         "content/mhe/text.js",
         "content/mhe/automation.js",
+        "content/mhe/queue.js",
         "content/mhe/toolbar.js",
         "content/ezto/main.js"
       ]

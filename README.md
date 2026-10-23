@@ -50,6 +50,14 @@
 
 Click "Stop Automation" at any time to pause the process. If automation has to stop on its own (for example the AI tab stopped responding), it shows an alert explaining why.
 
+## Class assignment queue
+
+On a `newconnect.mheducation.com/student/class/section/…` page, expand the groups to include and click **Actualizar lista** in the Auto-McGraw panel. Select activities and click **Iniciar seleccionadas**. The queue includes SmartBook, Homework and Quiz cards and uses the configured ChatGPT, Gemini or DeepSeek assistant with the existing supported question formats.
+
+The queue opens one activity at a time. If the browser blocks Begin, click Begin in Connect yourself. Launch screens and formats unsupported by the existing solvers require manual intervention. Graded tasks may require you to submit the attempt manually. A stopped solver, missing Next button or timeout does not count as completion: the queue reopens the Connect details and advances only when the attempt detail explicitly says Completed or Submitted. Otherwise, review the activity and click **Comprobar finalización**. Other completion wording also requires review; live completion screens have not yet been validated.
+
+**Detener** cancels the queue and its active solver without closing tabs. The queue survives service-worker suspension in session storage; closing the class tab cancels it. Reload the extension and the Connect pages after installing this update. This feature has mock-based tests; a full course run has not been validated on Connect.
+
 ## Settings
 
 Click the settings icon ( <img src="assets/settings-icon.svg" alt="Settings Icon" style="vertical-align: middle; width: 16px; height: 16px;"> ) next to the main button, or the extension's toolbar icon, to open the settings, where you can:

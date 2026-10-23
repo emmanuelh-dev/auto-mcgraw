@@ -7,7 +7,8 @@ importScripts(
   "tabs.js",
   "prompt.js",
   "relay.js",
-  "double-credit.js"
+  "double-credit.js",
+  "queue.js"
 );
 
 (() => {
