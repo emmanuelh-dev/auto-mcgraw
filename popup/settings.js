@@ -55,13 +55,14 @@
   }
 
   async function renderAssistants() {
-    const [{ aiModel }, openTabs] = await Promise.all([
+    const [{ aiModel, deepseekMode }, openTabs, credentials] = await Promise.all([
       settings.load(),
       Promise.all(
         assistants.list.map((assistant) =>
           chrome.tabs.query({ url: assistant.match })
         )
       ),
+      chrome.storage.local.get("deepseekApiKey"),
     ]);
     const selectedId = assistants.get(aiModel).id;
 
@@ -72,7 +73,9 @@
       if (!option) return;
 
       const isSelected = assistant.id === selectedId;
-      const { state, label } = describeAssistant(
+      const { state, label } = assistant.id === "deepseek" && deepseekMode === "api"
+        ? { state: credentials.deepseekApiKey ? "ready" : "missing", label: credentials.deepseekApiKey ? "API key saved" : "API key required" }
+        : describeAssistant(
         assistant,
         isSelected,
         openTabs[index].length > 0
@@ -162,6 +165,47 @@
     }
   }
 
+  const apiMode = document.getElementById("deepseek-mode");
+  const apiModel = document.getElementById("deepseek-model");
+  const apiKey = document.getElementById("deepseek-key");
+  const keyStatus = document.getElementById("deepseek-key-status");
+
+  async function renderApiSettings() {
+    const [values, credentials] = await Promise.all([
+      settings.load(), chrome.storage.local.get("deepseekApiKey"),
+    ]);
+    apiMode.value = values.deepseekMode;
+    apiModel.value = values.deepseekApiModel;
+    keyStatus.textContent = credentials.deepseekApiKey ? "Key saved on this device." : "No API key saved.";
+    document.getElementById("remove-deepseek-key").disabled = !credentials.deepseekApiKey;
+  }
+
+  apiMode.addEventListener("change", () => settings.save({ deepseekMode: apiMode.value }).catch(logError));
+  apiModel.addEventListener("change", () => settings.save({ deepseekApiModel: apiModel.value }).catch(logError));
+  document.getElementById("save-deepseek-key").addEventListener("click", async () => {
+    const key = apiKey.value.trim();
+    if (!key) { keyStatus.textContent = "Enter an API key first."; return; }
+    try {
+      await chrome.storage.local.set({ deepseekApiKey: key });
+      apiKey.value = "";
+      await renderApiSettings();
+    } catch { keyStatus.textContent = "Could not save the key."; }
+  });
+  document.getElementById("remove-deepseek-key").addEventListener("click", async () => {
+    try {
+      await chrome.storage.local.remove("deepseekApiKey");
+      apiKey.value = "";
+      await renderApiSettings();
+    } catch { keyStatus.textContent = "Could not remove the key."; }
+  });
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes.deepseekApiKey) {
+      renderApiSettings().catch(logError);
+      scheduleAssistantRefresh();
+    }
+  });
+  renderApiSettings().catch(logError);
+
   headerVersion.textContent = `v${installedVersion}`;
   installedVersionElement.textContent = `v${installedVersion}`;
 
@@ -184,6 +228,7 @@
   checkUpdatesButton.addEventListener("click", () => checkForUpdates(true));
 
   settings.subscribe(() => {
+    renderApiSettings().catch(logError);
     renderAssistants().catch(logError);
     renderToggles().catch(logError);
   });

@@ -8,6 +8,7 @@
     ["fill_in_the_blank", ".awd-probe-type-fill_in_the_blank"],
     ["select_text", ".awd-probe-type-select_text"],
     ["matching", ".awd-probe-type-matching"],
+    ["ordering", ".awd-probe-type-sortable"],
   ];
   const SELECT_TEXT_CHOICE = ".select-text-component .choice.-interactive";
   const BLANK_UI_SPANS =
@@ -81,7 +82,10 @@
         .filter(Boolean);
     }
 
-    return Array.from(container.querySelectorAll(".choiceText"))
+    const selector = type === "ordering"
+      ? ".sortable-component .responses-container .choice-item .content"
+      : ".choiceText";
+    return Array.from(container.querySelectorAll(selector))
       .map((choice) => text.readableText(choice))
       .filter(Boolean);
   }

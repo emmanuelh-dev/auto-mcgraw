@@ -64,8 +64,18 @@
 
   handle(T.QUEUE_CLAIM, async (_, sender) => {
     const queue = await read();
-    if (!queue || queue.phase !== "launching" || queue.childId !== sender.tab?.id || sender.frameId !== 0 || !activityURL.test(sender.url || "")) return { ok: true, claimed: false };
+    const rejected = (reason) => ({ ok: true, claimed: false, reason, phase: queue?.phase || null, expectedTab: queue?.childId ?? null, actualTab: sender.tab?.id ?? null });
+    if (!queue) return rejected("No active assignment queue");
+    if (sender.frameId !== 0 || !activityURL.test(sender.url || "")) return rejected("Unsupported activity URL or frame");
+    if (queue.phase === "launching" && queue.childId === null &&
+        (sender.tab?.id === queue.ownerId || sender.tab?.openerTabId === queue.ownerId)) {
+      queue.childId = sender.tab.id;
+    }
+    if (queue.childId !== sender.tab?.id) return rejected("Activity tab does not match the tab registered by the queue");
+    const resumed = queue.phase === "running" && sender.documentId && sender.documentId !== queue.documentId;
+    if (queue.phase !== "launching" && !resumed) return rejected("Queue is not launching or this document already claimed it");
     queue.phase = "running";
+    queue.documentId = sender.documentId || null;
     await save(queue);
     return { ok: true, claimed: true };
   });
@@ -86,6 +96,7 @@
     if (queue.childId !== null) await send(queue.childId, { type: T.QUEUE_CANCEL });
     queue.index += 1;
     queue.childId = null;
+    queue.documentId = null;
     queue.phase = queue.index === queue.items.length ? "done" : "ready";
     await save(queue);
     if (queue.phase === "done") await chrome.storage.session.remove(KEY);

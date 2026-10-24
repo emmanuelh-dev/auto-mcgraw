@@ -81,3 +81,12 @@ Any third-party names, trademarks, logos, assets, or likenesses referenced or di
 ## Issues
 
 Found a bug? [Create an issue](https://github.com/GooglyBlox/auto-mcgraw/issues).
+
+### DeepSeek API
+
+In Settings, select **DeepSeek**, then choose **API key** under **DeepSeek connection**.
+Paste your key and click **Save key**. Choose Flash or V4 Pro. No DeepSeek browser tab is needed in API mode.
+The key stays in local extension storage on this device; it is not synced. **Remove key** deletes it.
+DeepSeek bills API usage separately from its chat service. Saving a key does not validate it; authentication and balance errors appear when requesting an answer.
+
+The assignment queue panel also accepts **OpenAI API (ChatGPT)** and **Gemini API** keys directly. Select the provider, paste its key and click **Guardar clave**. Keys are stored separately on this device. OpenAI uses `gpt-4.1-mini`; Gemini uses `gemini-2.5-flash`. API access and billing are separate from chat subscriptions.

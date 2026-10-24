@@ -40,6 +40,9 @@
   }
 
   function readPageState() {
+    const exit = document.querySelector('[data-automation-id="summary--exit-assignment"]');
+    if (exit && !exit.disabled) return { kind: "summary", button: exit };
+
     const continueButton = findOverviewContinueButton();
     if (continueButton) return { kind: "overview", button: continueButton };
 
@@ -81,7 +84,7 @@
     let leftQuestion = false;
     return () => {
       const state = readPageState();
-      if (state.kind === "overview" || state.kind === "forcedLearning") {
+      if (state.kind === "overview" || state.kind === "forcedLearning" || state.kind === "summary") {
         return true;
       }
       if (state.kind !== "question") {
@@ -111,9 +114,10 @@
 
     toQuestionsButton.click();
     const nextButton = await run.waitFor(
-      () => document.querySelector(".next-button"),
+      () => readPageState().kind === "summary" || document.querySelector(".next-button"),
       { timeout: 10000 }
     );
+    if (nextButton === true) return;
     if (!nextButton) {
       run.stop(failure);
       return;
@@ -144,9 +148,10 @@
     pendingCorrection = questions.extractCorrection(questions.findContainer());
 
     const nextButton = await run.waitFor(
-      () => document.querySelector(".next-button"),
+      () => readPageState().kind === "summary" || document.querySelector(".next-button"),
       { timeout: 10000 }
     );
+    if (nextButton === true) return;
     if (!nextButton) {
       run.stop(
         "Couldn't find SmartBook's Next button after submitting the answer."
@@ -214,6 +219,13 @@
       return;
     }
 
+    if (state.kind === "summary") {
+      if (!await AutoMcGraw.assignmentQueue.returnToAssignments(state.button)) {
+        run.stop("Assignment summary reached. Return to Assignments to continue.");
+      }
+      return;
+    }
+
     if (state.kind === "overview") {
       state.button.click();
       await run.delay(1000);
@@ -272,7 +284,7 @@
     });
     currentSettings = await settings.load();
     render();
-    await AutoMcGraw.assignmentQueue.attach(session, () => Boolean(document.querySelector("awd-header")));
+    await AutoMcGraw.assignmentQueue.attach(session, () => readPageState().kind !== "loading");
 
     const job = await doubleCredit.claim();
     if (job) await doubleCredit.answerAsDuplicate(job, confidenceSelector());

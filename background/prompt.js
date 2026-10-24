@@ -13,7 +13,7 @@
     )}\n\nNow answer this new question:\n\n`;
   }
 
-  function build({ type, question, options, previousCorrection }) {
+  function build({ type, question, options, previousCorrection }, jsonOnly = false) {
     let prompt = `Type: ${type}\nQuestion: ${question}`;
 
     if (previousCorrection?.question && previousCorrection?.correctAnswer) {
@@ -23,8 +23,14 @@
     if (type === "matching") {
       prompt += `\nPrompts:\n${numbered(options.prompts)}`;
       prompt += `\nChoices:\n${numbered(options.choices)}`;
-      prompt +=
+      if (!options.multiple) prompt +=
         "\n\nPlease match each prompt with the correct choice. Set \"answer\" to an array of strings using the exact format 'Prompt -> Choice'. Include one entry per prompt, use exact prompt and choice text, and use each choice at most once.";
+      if (options.multiple) {
+        prompt += '\nThis is a grouping question: each prompt accepts multiple choices. Include one "Prompt -> Choice" entry for EVERY choice. Repeat prompts as needed and assign every choice exactly once.';
+      }
+    } else if (type === "ordering") {
+      prompt += `\nOptions:\n${numbered(options)}`;
+      prompt += '\n\nSet "answer" to an array containing all options in the requested order, from top to bottom. Use each option exactly once, with its exact text and without option numbers.';
     } else if (type === "fill_in_the_blank") {
       prompt +=
         "\n\nThis is a fill in the blank question. If there are multiple blanks, provide answers as an array in order of appearance. For a single blank, you can provide a string.";
@@ -44,7 +50,7 @@
       }
     }
 
-    return prompt + RESPONSE_FORMAT;
+    return prompt + (jsonOnly ? RESPONSE_FORMAT.replace("in a JSON code block", "a JSON object without Markdown") : RESPONSE_FORMAT);
   }
 
   AutoMcGraw.prompt = { build };

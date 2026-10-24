@@ -323,3 +323,6 @@ h2 {
 .settings-footer a:hover {
   color: var(--text);
 }
+
+.api-fields { display: grid; gap: 10px; }
+.api-fields input, .api-fields select { width: 100%; padding: 9px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }

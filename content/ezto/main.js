@@ -15,7 +15,7 @@
     for (const [type, selector] of ANSWER_TYPES) {
       if (document.querySelector(selector)) return type;
     }
-    return "";
+    return AutoMcGraw.eztoGrouping?.read() ? "matching" : "";
   }
 
   function isQuizPage() {
@@ -48,7 +48,7 @@
     const type = detectType();
     if (!questionElement || !type) return null;
 
-    let options = [];
+    let options = type === "matching" ? AutoMcGraw.eztoGrouping.options() : [];
     if (type === "multiple_choice") {
       options = multipleChoiceLabels();
     } else if (type === "true_false") {
@@ -71,9 +71,9 @@
     );
   }
 
-  function isQuizComplete() {
+  function isLastQuestion() {
     const match = progressText().match(/(\d+)\s+of\s+(\d+)/);
-    return Boolean(match) && Number(match[1]) > Number(match[2]);
+    return Boolean(match) && Number(match[2]) > 0 && Number(match[1]) === Number(match[2]);
   }
 
   function signature() {
@@ -122,7 +122,8 @@
     return true;
   }
 
-  function applyAnswer(type, values) {
+  function applyAnswer(type, values, run) {
+    if (type === "matching") return AutoMcGraw.eztoGrouping.apply(values, run);
     if (type === "multiple_choice") return selectMultipleChoice(values);
     if (type === "true_false") return selectTrueFalse(values);
     if (type === "fill_in_the_blank") return fillBlank(values);
@@ -141,12 +142,45 @@
     return button;
   }
 
-  async function step(run) {
-    if (isQuizComplete()) {
-      run.stop("Quiz completed - all questions answered.");
+  function visibleButton(selector) {
+    return Array.from(document.querySelectorAll(selector)).find(
+      (button) => dom.isEnabled(button) && button.getClientRects().length > 0 &&
+        !button.closest('[aria-hidden="true"]')
+    );
+  }
+
+  async function submitQuiz(run) {
+    const submit = Array.from(document.querySelectorAll("button, a")).find(
+      (button) => button.textContent.trim() === "Submit" &&
+        dom.isEnabled(button) && button.getClientRects().length > 0 &&
+        !button.closest('[role="dialog"], ic-modal, [aria-hidden="true"]')
+    );
+    if (!submit) {
+      run.stop("Submit button unavailable. Review the quiz.");
       return;
     }
+    submit.click();
+    const confirmButton = await run.waitFor(
+      () => visibleButton(".modal--submit-activity__button--confirm"),
+      { timeout: 15000 }
+    );
+    if (!confirmButton) {
+      run.stop("Submission confirmation unavailable. Review the quiz.");
+      return;
+    }
+    confirmButton.click();
+    const exitButton = await run.waitFor(
+      () => visibleButton('.dialog__wrapper[aria-describedby="post-submission-content"] .dialog__exit'),
+      { timeout: 30000 }
+    );
+    if (!exitButton) {
+      run.stop("Submission not confirmed. Review the quiz.");
+      return;
+    }
+    await AutoMcGraw.assignmentQueue.returnToAssignments(exitButton);
+  }
 
+  async function step(run) {
     const question = parseQuestion();
     if (!question) {
       run.stop("No question found or question type not supported.");
@@ -160,7 +194,7 @@
     const values = text.flattenAnswerValues(reply?.answer);
     const isDone = () => signature() !== questionSignature;
 
-    if (!applyAnswer(question.type, values)) {
+    if (!await applyAnswer(question.type, values, run)) {
       await run.pauseForManualAnswer(
         "Couldn't match the AI's answer to this question's choices.",
         values,
@@ -178,7 +212,8 @@
     await run.delay(2000);
     const nextButton = findNextButton();
     if (!nextButton) {
-      run.stop("Quiz completed - no next button available.");
+      if (isLastQuestion()) await submitQuiz(run);
+      else run.stop("Next button unavailable before the final question. Review the quiz.");
       return;
     }
 

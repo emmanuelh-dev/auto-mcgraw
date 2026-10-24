@@ -1,5 +1,5 @@
 (() => {
-  const { text, dom, matching, questions } = AutoMcGraw;
+  const { text, dom, matching, questions, wait } = AutoMcGraw;
 
   const UNMATCHED_HEADING =
     "Couldn't match the AI's answer to this question's choices.";
@@ -84,6 +84,77 @@
     return text.dedupeAnswers(values);
   }
 
+  async function orderChoices(container, raw) {
+    const selector = ".sortable-component .responses-container .choice-item";
+    const items = () => Array.from(container.querySelectorAll(selector));
+    const label = (item) => text.normalizeChoiceText(
+      text.readableText(item.querySelector(".content"))
+    );
+    const current = items().map(label);
+    const desired = text.flattenAnswerValues(raw).map(text.normalizeChoiceText);
+    if (!current.length || desired.length !== current.length ||
+        new Set(desired).size !== current.length ||
+        desired.some((value) => !current.includes(value))) return false;
+
+    function press(item, key, code, keyCode) {
+      const KeyboardEvent = item.ownerDocument.defaultView.KeyboardEvent;
+      for (const type of ["keydown", "keyup"]) {
+        item.dispatchEvent(new KeyboardEvent(type, {
+          key, code, keyCode, which: keyCode, bubbles: true, cancelable: true,
+        }));
+      }
+    }
+
+    for (let target = 0; target < desired.length; target += 1) {
+      const index = items().findIndex((item) => label(item) === desired[target]);
+      if (index === target) continue;
+      const item = items()[index];
+      const view = item.ownerDocument.defaultView;
+      if (item.draggable && view.DataTransfer && view.DragEvent) {
+        const destination = items()[target];
+        const rect = destination.getBoundingClientRect();
+        const dataTransfer = new view.DataTransfer();
+        const dispatch = (element, type) => element.dispatchEvent(
+          new view.DragEvent(type, {
+            bubbles: true, cancelable: true, dataTransfer,
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + Math.min(5, rect.height / 4),
+          })
+        );
+        try {
+          dispatch(item, "dragstart");
+          await wait.delay(80);
+          dispatch(destination, "dragenter");
+          dispatch(destination, "dragover");
+          await wait.delay(80);
+          dispatch(destination, "drop");
+        } finally {
+          dispatch(item, "dragend");
+        }
+        const moved = await wait.waitFor(
+          () => label(items()[target]) === desired[target],
+          { timeout: 1500, interval: 50 }
+        );
+        if (!moved) return false;
+        continue;
+      }
+      item.focus();
+      press(item, " ", "Space", 32);
+      await wait.delay(80);
+      for (let position = index; position > target; position -= 1) {
+        press(item, "ArrowUp", "ArrowUp", 38);
+        await wait.delay(80);
+      }
+      press(item, " ", "Space", 32);
+      const moved = await wait.waitFor(
+        () => label(items()[target]) === desired[target],
+        { timeout: 1500, interval: 50 }
+      );
+      if (!moved) return false;
+    }
+    return items().every((item, index) => label(item) === desired[index]);
+  }
+
   async function apply(container, raw) {
     const type = questions.detectType(container);
     const lines = normalizeAnswers(raw, type, container);
@@ -94,6 +165,14 @@
         lines,
         heading:
           "Matching question: the matches couldn't be placed automatically.",
+      };
+    }
+
+    if (type === "ordering") {
+      return {
+        applied: await orderChoices(container, raw),
+        lines,
+        heading: "Ordering question: the choices couldn't be reordered automatically.",
       };
     }
 

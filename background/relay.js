@@ -49,7 +49,17 @@
   }
 
   async function relayQuestion({ question, requestId }, sourceTab) {
-    const { aiModel } = await settings.load();
+    const values = await settings.load();
+    const { aiModel, deepseekApiModel } = values;
+    if (values[`${aiModel}Mode`] === "api") {
+      try {
+        const answer = await AutoMcGraw.deepseekApi.ask(prompt.build(question, true), deepseekApiModel, aiModel);
+        await deliver(sourceTab.id, { type: MessageType.ASSISTANT_ANSWER, answer, requestId });
+      } catch (error) {
+        await reportError(sourceTab.id, requestId, error.message, true);
+      }
+      return;
+    }
     const assistant = assistants.get(aiModel);
     const assistantTab = await tabs.findByMatch(assistant.match);
 

@@ -78,6 +78,30 @@
         </div>
       </section>
 
+      <section class="settings-section" aria-labelledby="deepseek-api-heading">
+        <h2 id="deepseek-api-heading">DeepSeek connection</h2>
+        <div class="panel api-fields">
+          <label for="deepseek-mode">Connection</label>
+          <select id="deepseek-mode">
+            <option value="browser">Browser tab</option>
+            <option value="api">API key</option>
+          </select>
+          <label for="deepseek-model">API model</label>
+          <select id="deepseek-model">
+            <option value="deepseek-flash">DeepSeek Flash</option>
+            <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
+          </select>
+          <label for="deepseek-key">API key</label>
+          <input id="deepseek-key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a new key" />
+          <div class="panel-actions">
+            <button id="save-deepseek-key" type="button" class="button button-primary">Save key</button>
+            <button id="remove-deepseek-key" type="button" class="button">Remove key</button>
+          </div>
+          <p id="deepseek-key-status" class="option-description" role="status"></p>
+          <p class="option-description">Stored on this device. API usage is billed by DeepSeek. Select DeepSeek above to use it.</p>
+        </div>
+      </section>
+
       <section class="settings-section" aria-labelledby="automation-heading">
         <h2 id="automation-heading">Automation</h2>
         <div class="option-list">

@@ -1,6 +1,10 @@
 (() => {
   const DEFAULTS = Object.freeze({
     aiModel: AutoMcGraw.assistants.DEFAULT_ID,
+    chatgptMode: "browser",
+    geminiMode: "browser",
+    deepseekMode: "browser",
+    deepseekApiModel: "deepseek-flash",
     doubleCreditMode: false,
     randomConfidence: false,
     pauseBeforeSubmit: false,

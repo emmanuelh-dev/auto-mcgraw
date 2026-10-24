@@ -1,6 +1,7 @@
 (() => {
   const MessageType = Object.freeze({
     PING: "ping",
+    API_CONFIG: "apiConfig",
     QUEUE_START: "queueStart",
     QUEUE_STATE: "queueState",
     QUEUE_LAUNCH: "queueLaunch",

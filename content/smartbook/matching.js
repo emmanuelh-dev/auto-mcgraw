@@ -3,11 +3,11 @@
   const { KEYS, pressKey } = dom;
 
   const ALL_CHOICES =
-    '.choice-item-wrapper:not(.-placeholder)[id^="choices:"], .choice-item-wrapper:not(.-placeholder)[id^="response:"]';
+    '.choice-item-wrapper:not(.-placeholder)[id^="choices:"], .choice-item-wrapper:not(.-placeholder)[id^="response:"], .draggableItem[data-item-key]';
   const POOL_CHOICES =
-    '.choices-container .choice-item-wrapper:not(.-placeholder)[id^="choices:"]';
+    '.choices-container .choice-item-wrapper:not(.-placeholder)[id^="choices:"], .choices-container .draggableItem[data-item-key]';
   const ROW_CHOICE =
-    '.match-single-response-wrapper .choice-item-wrapper:not(.-placeholder)[id^="choices:"], .match-single-response-wrapper .choice-item-wrapper:not(.-placeholder)[id^="response:"]';
+    '.match-single-response-wrapper .choice-item-wrapper:not(.-placeholder)[id^="choices:"], .match-single-response-wrapper .choice-item-wrapper:not(.-placeholder)[id^="response:"], .draggableItem[data-item-key]';
   const DRAG_HANDLE = "[data-react-beautiful-dnd-drag-handle]";
   const MAX_PASSES = 4;
   const LOG_PREFIX = "[Auto-McGraw]";
@@ -39,7 +39,10 @@
 
   function choiceText(item) {
     if (!item) return "";
-    const content = item.querySelector(".content") || item.querySelector("p");
+    const content =
+      item.querySelector(".dragItemContent") ||
+      item.querySelector(".content") ||
+      item.querySelector("p");
     return text.normalizeChoiceText((content || item).textContent || "");
   }
 
@@ -55,8 +58,9 @@
   function locateChoice(container, target) {
     const matchRows = rows(container);
     for (let rowIndex = 0; rowIndex < matchRows.length; rowIndex += 1) {
-      const item = rowChoice(matchRows[rowIndex]);
-      if (item && text.isAnswerMatch(choiceText(item), target)) {
+      const item = Array.from(matchRows[rowIndex].querySelectorAll(ROW_CHOICE))
+        .find((candidate) => text.isAnswerMatch(choiceText(candidate), target));
+      if (item) {
         return { area: "row", rowIndex, poolIndex: -1, item };
       }
     }
@@ -84,10 +88,9 @@
   }
 
   function readOptions(container) {
-    return {
-      prompts: readPrompts(container).filter(Boolean),
-      choices: readChoices(container),
-    };
+    const prompts = readPrompts(container).filter(Boolean);
+    const choices = readChoices(container);
+    return { prompts, choices, multiple: choices.length > prompts.length };
   }
 
   function numericReference(value, candidates) {
@@ -268,14 +271,22 @@
 
     pairs.forEach(({ promptRef, choiceRef }) => {
       const prompt = resolveReference(promptRef, prompts, "prompt");
-      const choice = resolveReference(choiceRef, choices, "choice");
-      if (!prompt || !choice) return;
+      const exact = choices.find((choice) =>
+        text.isAnswerMatch(choice, text.normalizeChoiceText(String(choiceRef)))
+      );
+      const references = !exact && choices.length > prompts.length && String(choiceRef).includes(",")
+        ? String(choiceRef).split(",").map((reference) => reference.trim())
+        : [choiceRef];
+      const resolved = references.map((reference) => resolveReference(reference, choices, "choice"));
+      if (!prompt || resolved.some((choice) => !choice)) return;
 
       const rowIndex = prompts.findIndex((candidate) =>
         text.isAnswerMatch(candidate, prompt)
       );
-      if (rowIndex < 0 || targets.has(rowIndex)) return;
-      targets.set(rowIndex, choice);
+      if (rowIndex < 0) return;
+      resolved.forEach((choice) => {
+        if (!targets.has(choice)) targets.set(choice, rowIndex);
+      });
     });
 
     if (targets.size === 0 && loose.length === prompts.length) {
@@ -283,14 +294,17 @@
         .map((reference) => resolveReference(reference, choices, "choice"))
         .filter(Boolean);
       if (ordered.length === prompts.length) {
-        ordered.forEach((choice, rowIndex) => targets.set(rowIndex, choice));
+        ordered.forEach((choice, rowIndex) => targets.set(choice, rowIndex));
       }
     }
 
-    return prompts.map((prompt, rowIndex) => ({
+    if (choices.length > prompts.length && targets.size !== choices.length) return [];
+    if (choices.length <= prompts.length &&
+        new Set(targets.values()).size !== prompts.length) return [];
+    return Array.from(targets, ([choice, rowIndex]) => ({
       rowIndex,
-      promptText: prompt,
-      choiceText: targets.get(rowIndex) || "",
+      promptText: prompts[rowIndex],
+      choiceText: choice,
     }));
   }
 
@@ -320,15 +334,10 @@
 
   function isAligned(container, targets) {
     const matchRows = rows(container);
-    if (!targets.length || matchRows.length !== targets.length) return false;
-
-    return targets.every(
-      (target, rowIndex) =>
-        Boolean(target.choiceText) &&
-        text.isAnswerMatch(
-          choiceText(rowChoice(matchRows[rowIndex])),
-          target.choiceText
-        )
+    if (!targets.length) return false;
+    return targets.every((target) =>
+      Array.from(matchRows[target.rowIndex].querySelectorAll(ROW_CHOICE))
+        .some((item) => text.isAnswerMatch(choiceText(item), target.choiceText))
     );
   }
 
@@ -372,6 +381,43 @@
   }
 
   async function placeTarget(container, target) {
+    const origin = locateChoice(container, target.choiceText);
+    if (origin?.item.matches('.draggableItem[draggable="true"]')) {
+      if (origin.rowIndex === target.rowIndex) return true;
+      const destination = Array.from(rows(container)[target.rowIndex]?.querySelectorAll(
+        '[data-drop-target-for-element="true"]'
+      ) || []).find((element) =>
+        !element.matches(ALL_CHOICES) && !element.querySelector(ALL_CHOICES)
+      );
+      if (!destination) return false;
+
+      const dataTransfer = new DataTransfer();
+      const rect = destination.getBoundingClientRect();
+      const dispatch = (element, type) =>
+        element.dispatchEvent(new DragEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+        }));
+
+      try {
+        dispatch(origin.item, "dragstart");
+        await wait.delay(80);
+        dispatch(destination, "dragenter");
+        dispatch(destination, "dragover");
+        await wait.delay(80);
+        dispatch(destination, "drop");
+      } finally {
+        dispatch(origin.item, "dragend");
+      }
+      await wait.delay(120);
+      return (
+        locateChoice(container, target.choiceText)?.rowIndex === target.rowIndex
+      );
+    }
+
     for (const liftKey of LIFT_KEYS) {
       const location = locateChoice(container, target.choiceText);
       if (!location) return false;
