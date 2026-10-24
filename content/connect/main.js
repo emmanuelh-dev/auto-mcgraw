@@ -7,17 +7,24 @@
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `<style>
     :host{font:14px system-ui;color:#172b35}section{background:white;border:1px solid #557783;border-radius:8px;padding:14px;width:320px;box-shadow:0 3px 15px #0003}
-    h2{font-size:16px;margin:0 0 8px}p{margin:8px 0}button{padding:7px;margin:3px;cursor:pointer}label{display:block;padding:4px}#items{max-height:180px;overflow:auto}button:disabled{cursor:default}
-  </style><section><h2>Auto-McGraw · Cola de actividades</h2>
+    h2{font-size:16px;margin:0;flex:1}header{display:flex;align-items:center;gap:8px}p{margin:8px 0}button{padding:7px;margin:3px;cursor:pointer}label{display:block;padding:4px}#items{max-height:180px;overflow:auto}button:disabled{cursor:default}
+  </style><section><header><h2>Auto-McGraw · Cola de actividades</h2><button id="minimize" type="button" aria-label="Minimizar panel" aria-expanded="true" aria-controls="panel-content">−</button></header><div id="panel-content">
     <label>Conexión <select id="connection"><option value="browser">Asistente en pestaña</option><option value="deepseek">DeepSeek API</option><option value="chatgpt">OpenAI API (ChatGPT)</option><option value="gemini">Gemini API</option></select></label>
     <div id="api-fields" hidden><label>API key <input id="api-key" type="password" autocomplete="off" placeholder="Pega la clave del proveedor seleccionado"></label><button id="save-key">Guardar clave</button><p id="key-status" role="status"></p></div>
     <p>Actualizar lista abre los grupos y busca todas las actividades compatibles.</p>
     <button id="scan">Actualizar lista</button><div id="items"></div>
     <button id="start">Iniciar seleccionadas</button><button id="stop" disabled>Detener</button>
     <button id="verify" hidden>Comprobar finalización</button>
-    <p id="status" role="status"></p></section>`;
+    <p id="status" role="status"></p></div></section>`;
   document.documentElement.appendChild(host);
   const get = (id) => root.getElementById(id);
+  get("minimize").onclick = () => {
+    const minimized = !get("panel-content").hidden;
+    get("panel-content").hidden = minimized;
+    get("minimize").textContent = minimized ? "+" : "−";
+    get("minimize").setAttribute("aria-label", minimized ? "Expandir panel" : "Minimizar panel");
+    get("minimize").setAttribute("aria-expanded", String(!minimized));
+  };
   let queue = null;
   let items = [];
   let busy = false;
