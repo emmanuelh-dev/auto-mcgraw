@@ -26,7 +26,7 @@
       if (!options.multiple) prompt +=
         "\n\nPlease match each prompt with the correct choice. Set \"answer\" to an array of strings using the exact format 'Prompt -> Choice'. Include one entry per prompt, use exact prompt and choice text, and use each choice at most once.";
       if (options.multiple) {
-        prompt += '\nThis is a grouping question: each prompt accepts multiple choices. Include one "Prompt -> Choice" entry for EVERY choice. Repeat prompts as needed and assign every choice exactly once.';
+        prompt += `\nThis is a grouping question with ${options.prompts.length} groups and ${options.choices.length} choices. Set "answer" to an array of exactly ${options.choices.length} strings in the format "Prompt -> Choice", one entry for EVERY choice, not one per group. Repeat prompts as needed and assign every choice exactly once. Use exact prompt and choice text without the list numbers. Each entry must contain exactly one arrow. Before answering, verify that all ${options.choices.length} choices are included without duplicates.`;
       }
     } else if (type === "ordering") {
       prompt += `\nOptions:\n${numbered(options)}`;

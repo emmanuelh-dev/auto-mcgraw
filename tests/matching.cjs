@@ -3,6 +3,23 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 
+test('grouping prompt requests one mapping per choice when groups are fewer', () => {
+  const context = vm.createContext({ AutoMcGraw: {} });
+  vm.runInContext(fs.readFileSync('background/prompt.js', 'utf8'), context);
+  const options = {
+    prompts: Array.from({ length: 6 }, (_, i) => `Group ${i + 1}`),
+    choices: Array.from({ length: 10 }, (_, i) => `Label ${i + 1}`),
+    multiple: true,
+  };
+  const prompt = context.AutoMcGraw.prompt.build({ type: 'matching', question: 'Group labels', options });
+  assert.match(prompt, /6 groups and 10 choices/);
+  assert.match(prompt, /array of exactly 10 strings/);
+  assert.match(prompt, /not one per group/);
+  assert.match(prompt, /without the list numbers/);
+  assert.match(prompt, /exactly one arrow/);
+  for (const label of options.choices) assert.ok(prompt.includes(label));
+});
+
 function setup(extraChoices = []) {
   const items = [];
   const prompts = ['Self-serving bias', 'Fundamental attribution error'];

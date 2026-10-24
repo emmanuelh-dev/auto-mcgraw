@@ -85,7 +85,7 @@
       const heading = card.querySelector('[id^="assignmentName-"]');
       const type = card.querySelector(".assignment-card__first-row-type")?.getAttribute("title") || "";
       const launch = card.querySelector('[data-automation-id^="launch-btn-"]');
-      return { id: heading?.id.replace("assignmentName-", ""), title: heading?.textContent.trim(), type, enabled: isLaunchAvailable(launch) && !card.querySelector('[data-automation-id="recharge-pill"]') };
+      return { id: heading?.id.replace("assignmentName-", ""), title: heading?.textContent.trim(), type, enabled: isLaunchAvailable(launch) && !card.querySelector('[data-automation-id="recharge-pill"]') && !Array.from(card.querySelectorAll(".assignment-card__status")).some((status) => /^see report$/i.test(status.textContent.trim())) };
     }).filter((item) => item.id && item.enabled && /^(smartbook|homework|quiz)$/i.test(item.type));
     get("items").replaceChildren();
     items.forEach((item) => {

@@ -20,7 +20,7 @@
 
   function isQuizPage() {
     return (
-      Boolean(document.querySelector(".question")) && Boolean(detectType())
+      Boolean(document.querySelector(".question, .worksheet__main")) && Boolean(detectType())
     );
   }
 
@@ -44,7 +44,7 @@
   }
 
   function parseQuestion() {
-    const questionElement = document.querySelector(".question");
+    const questionElement = document.querySelector(".question, .worksheet__main");
     const type = detectType();
     if (!questionElement || !type) return null;
 
@@ -78,7 +78,7 @@
 
   function signature() {
     const question =
-      document.querySelector(".question")?.textContent.trim() || "";
+      document.querySelector(".question, .worksheet__main")?.textContent.trim() || "";
     return `${progressText()}::${question}`;
   }
 
@@ -131,7 +131,7 @@
   }
 
   function findNextButton() {
-    const button = document.querySelector(".footer__link--next:not([hidden])");
+    const button = visibleButton(".footer__link--next:not([hidden])");
     if (
       !button ||
       button.disabled ||
@@ -181,17 +181,24 @@
   }
 
   async function step(run) {
-    const question = parseQuestion();
+    const question = await run.waitFor(parseQuestion, { timeout: 20000 });
     if (!question) {
       run.stop("No question found or question type not supported.");
       return;
     }
 
     const questionSignature = signature();
+    console.info("[Auto-McGraw EZTO] Waiting for AI answer");
     const reply = await run.ask(question);
-    if (signature() !== questionSignature) return;
+    if (signature() !== questionSignature) {
+      console.info("[Auto-McGraw EZTO] Question changed while waiting for AI");
+      return;
+    }
+    console.info("[Auto-McGraw EZTO] Applying answer");
 
-    const values = text.flattenAnswerValues(reply?.answer);
+    const values = question.type === "matching"
+      ? AutoMcGraw.eztoGrouping.answerValues(reply?.answer)
+      : text.flattenAnswerValues(reply?.answer);
     const isDone = () => signature() !== questionSignature;
 
     if (!await applyAnswer(question.type, values, run)) {
@@ -204,21 +211,31 @@
       return;
     }
 
-    if (currentSettings.pauseBeforeSubmit) {
-      await run.waitForUser(isDone);
-      return;
-    }
+    console.info("[Auto-McGraw EZTO] Answer applied");
 
     await run.delay(2000);
-    const nextButton = findNextButton();
+    if (isDone()) return;
+    console.info("[Auto-McGraw EZTO] Looking for visible Next");
+    const nextButton = await run.waitFor(findNextButton, { timeout: 10000 });
     if (!nextButton) {
-      if (isLastQuestion()) await submitQuiz(run);
+      if (isLastQuestion()) {
+        if (currentSettings.pauseBeforeSubmit) {
+          await run.waitForUser(isDone);
+          return;
+        }
+        await submitQuiz(run);
+      }
       else run.stop("Next button unavailable before the final question. Review the quiz.");
       return;
     }
 
+    console.info("[Auto-McGraw EZTO] Clicking visible Next", nextButton);
     nextButton.click();
-    await run.delay(1500);
+    if (!await run.waitFor(isDone, { timeout: 15000 })) {
+      run.stop("Next did not change the question. Review the quiz.");
+    } else {
+      console.info("[Auto-McGraw EZTO] Next changed the question");
+    }
   }
 
   const session = automation.create({ step, onStateChange: render });
