@@ -25,6 +25,8 @@ test('sends JSON request with local key and preserves matching answer', async ()
   assert.equal(calls[0][1].headers.Authorization, 'Bearer test-key');
   const body = JSON.parse(calls[0][1].body);
   assert.equal(body.model, 'deepseek-flash');
+  assert.equal(body.thinking.type, 'enabled');
+  assert.equal(body.reasoning_effort, 'high');
   assert.equal(body.response_format.type, 'json_object');
 });
 test('missing key prevents requests', async () => {

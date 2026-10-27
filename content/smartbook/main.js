@@ -144,8 +144,6 @@
     }
 
     confidenceButton.click();
-    await run.delay(1000);
-    pendingCorrection = questions.extractCorrection(questions.findContainer());
 
     const nextButton = await run.waitFor(
       () => readPageState().kind === "summary" || document.querySelector(".next-button"),
@@ -159,8 +157,11 @@
       return;
     }
 
+    pendingCorrection = questions.extractCorrection(questions.findContainer());
     nextButton.click();
-    await run.delay(1000);
+    if (!await run.waitFor(isDone, { timeout: 10000 })) {
+      run.stop("SmartBook didn't change questions after clicking Next.");
+    }
   }
 
   async function answerQuestion(run, container) {
@@ -200,11 +201,6 @@
         reply.answer,
         questions.questionKey(current)
       );
-    }
-
-    if (currentSettings.pauseBeforeSubmit) {
-      await run.waitForUser(isDone);
-      return;
     }
 
     await submit(run, result.lines, isDone);

@@ -23,7 +23,7 @@
       model: provider === "chatgpt" ? "gpt-4.1-mini" : model,
       messages: [{ role: "system", content: instruction }, { role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      ...(provider === "deepseek" ? { thinking: { type: "disabled" } } : {}),
+      ...(provider === "deepseek" ? { thinking: { type: "enabled" }, reasoning_effort: "high" } : {}),
       max_tokens: 4096,
     };
     let response;
