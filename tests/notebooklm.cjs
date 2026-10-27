@@ -51,7 +51,7 @@ test('NotebookLM adapter registers response and generation selectors and both ma
     assert.equal(id, 'notebooklm'); adapter = value;
   } } }, document: {
     querySelectorAll: selector => selector === '.to-user-message-inner-content .message-text-content' ? [response] : [],
-    querySelector: selector => selector === 'button[aria-label="Stop generating"]' ? {} : null,
+    querySelector: selector => selector.includes('button[aria-label="Stop generating"]') ? {} : null,
   } };
   load(context, 'content/assistant/notebooklm.js');
   assert.equal(adapter.getResponses()[0], response);
@@ -64,4 +64,15 @@ test('NotebookLM adapter registers response and generation selectors and both ma
     assert.ok(entry.matches.includes(host));
     assert.ok(manifest.host_permissions.includes(host));
   }
+});
+test('NotebookLM composer selectors do not depend on translated accessible labels', () => {
+  let adapter;
+  let busySelector;
+  load({ AutoMcGraw: { assistantBridge: { register: (_, value) => { adapter = value; } } },
+    document: { querySelector: selector => { busySelector = selector; return {}; } },
+  }, 'content/assistant/notebooklm.js');
+  assert.deepEqual(Array.from(adapter.inputSelectors), ['textarea.query-box-input']);
+  assert.deepEqual(Array.from(adapter.sendSelectors), ['.query-box .submit-button button']);
+  assert.equal(adapter.isBusy(), true);
+  assert.ok(busySelector.includes('textarea.query-box-input:disabled'));
 });
