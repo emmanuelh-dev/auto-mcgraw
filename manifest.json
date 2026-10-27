@@ -3,7 +3,11 @@
   "name": "Auto-McGraw Smartbook",
   "version": "3.0",
   "description": "Sends McGraw Hill SmartBook questions to an AI assistant (ChatGPT, Gemini or DeepSeek) and fills in its answers.",
-  "permissions": ["tabs", "scripting", "storage"],
+  "permissions": [
+    "tabs",
+    "scripting",
+    "storage"
+  ],
   "host_permissions": [
     "https://newconnect.mheducation.com/*",
     "https://learning.mheducation.com/*",
@@ -14,7 +18,9 @@
     "https://api.deepseek.com/*",
     "https://api.openai.com/*",
     "https://generativelanguage.googleapis.com/*",
-    "https://api.github.com/*"
+    "https://api.github.com/*",
+    "https://notebook.google.com/*",
+    "https://notebooklm.google.com/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js"
@@ -28,7 +34,9 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://newconnect.mheducation.com/student/class/section/*"],
+      "matches": [
+        "https://newconnect.mheducation.com/student/class/section/*"
+      ],
       "js": [
         "shared/namespace.js",
         "shared/messaging.js",
@@ -37,7 +45,9 @@
       ]
     },
     {
-      "matches": ["https://learning.mheducation.com/static/awd/*"],
+      "matches": [
+        "https://learning.mheducation.com/static/awd/*"
+      ],
       "js": [
         "shared/namespace.js",
         "shared/assistants.js",
@@ -57,7 +67,9 @@
       ]
     },
     {
-      "matches": ["https://ezto.mheducation.com/*"],
+      "matches": [
+        "https://ezto.mheducation.com/*"
+      ],
       "js": [
         "shared/namespace.js",
         "shared/assistants.js",
@@ -74,7 +86,9 @@
       ]
     },
     {
-      "matches": ["https://chatgpt.com/*"],
+      "matches": [
+        "https://chatgpt.com/*"
+      ],
       "js": [
         "shared/namespace.js",
         "shared/assistants.js",
@@ -87,7 +101,9 @@
       ]
     },
     {
-      "matches": ["https://gemini.google.com/*"],
+      "matches": [
+        "https://gemini.google.com/*"
+      ],
       "js": [
         "shared/namespace.js",
         "shared/assistants.js",
@@ -100,7 +116,9 @@
       ]
     },
     {
-      "matches": ["https://chat.deepseek.com/*"],
+      "matches": [
+        "https://chat.deepseek.com/*"
+      ],
       "js": [
         "shared/namespace.js",
         "shared/assistants.js",
@@ -110,6 +128,22 @@
         "content/assistant/response.js",
         "content/assistant/bridge.js",
         "content/assistant/deepseek.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://notebook.google.com/*",
+        "https://notebooklm.google.com/*"
+      ],
+      "js": [
+        "shared/namespace.js",
+        "shared/assistants.js",
+        "shared/messaging.js",
+        "shared/wait.js",
+        "shared/dom.js",
+        "content/assistant/response.js",
+        "content/assistant/bridge.js",
+        "content/assistant/notebooklm.js"
       ]
     }
   ]

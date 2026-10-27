@@ -61,13 +61,24 @@
       return;
     }
     const assistant = assistants.get(aiModel);
-    const assistantTab = await tabs.findByMatch(assistant.match);
+    if (assistant.id === "notebooklm" && !assistants.normalizeNotebookUrl(values.notebookUrl)) {
+      await reportError(sourceTab.id, requestId, "Configure a valid NotebookLM notebook URL in settings first.", true);
+      return;
+    }
+    const assistantTab = await tabs.findByMatch(
+      assistant.matches || assistant.match,
+      assistant.id === "notebooklm"
+        ? (tab) => assistants.matchesNotebookUrl(tab.url, values.notebookUrl)
+        : undefined
+    );
 
     if (!assistantTab) {
       await reportError(
         sourceTab.id,
         requestId,
-        `Please open ${assistant.name} in another tab before using automation.`,
+        assistant.id === "notebooklm"
+          ? "Please open the configured NotebookLM notebook in another tab before using automation."
+          : `Please open ${assistant.name} in another tab before using automation.`,
         true
       );
       return;

@@ -75,6 +75,26 @@
             </span>
             <span class="status-dot" aria-hidden="true"></span>
           </label>
+          <label class="option assistant-option" data-assistant="notebooklm">
+            <input type="radio" name="assistant" value="notebooklm" />
+            <span class="assistant-icon" aria-hidden="true">📓</span>
+            <span class="option-text">
+              <span class="option-title">NotebookLM</span>
+              <span class="option-description" data-status>Checking...</span>
+            </span>
+            <span class="status-dot" aria-hidden="true"></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-section" aria-labelledby="notebook-heading">
+        <h2 id="notebook-heading">NotebookLM connection</h2>
+        <div class="panel api-fields">
+          <label for="notebook-url">Notebook URL</label>
+          <input id="notebook-url" type="url" placeholder="https://notebook.google.com/notebook/…" />
+          <button id="save-notebook-url" type="button" class="button">Save notebook</button>
+          <p id="notebook-status" class="option-description" role="status"></p>
+          <p class="option-description">Keep this notebook open and signed in. Select NotebookLM above to use its sources.</p>
         </div>
       </section>
 

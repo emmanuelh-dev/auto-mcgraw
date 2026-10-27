@@ -55,11 +55,11 @@
   }
 
   async function renderAssistants() {
-    const [{ aiModel, deepseekMode }, openTabs, credentials] = await Promise.all([
+    const [{ aiModel, deepseekMode, notebookUrl }, openTabs, credentials] = await Promise.all([
       settings.load(),
       Promise.all(
         assistants.list.map((assistant) =>
-          chrome.tabs.query({ url: assistant.match })
+          chrome.tabs.query({ url: assistant.matches || assistant.match })
         )
       ),
       chrome.storage.local.get("deepseekApiKey"),
@@ -78,7 +78,7 @@
         : describeAssistant(
         assistant,
         isSelected,
-        openTabs[index].length > 0
+        openTabs[index].some((tab) => assistant.id !== "notebooklm" || assistants.matchesNotebookUrl(tab.url, notebookUrl))
       );
       option.querySelector("input").checked = isSelected;
       option.dataset.state = state;
@@ -164,6 +164,22 @@
       checkUpdatesButton.disabled = false;
     }
   }
+
+  const notebookInput = document.getElementById("notebook-url");
+  const notebookStatus = document.getElementById("notebook-status");
+  settings.load().then((values) => { notebookInput.value = values.notebookUrl; }).catch(logError);
+  document.getElementById("save-notebook-url").addEventListener("click", async () => {
+    const notebookUrl = assistants.normalizeNotebookUrl(notebookInput.value.trim());
+    if (!notebookUrl) {
+      notebookStatus.textContent = "Enter a valid NotebookLM notebook URL.";
+      return;
+    }
+    try {
+      await settings.save({ notebookUrl });
+      notebookInput.value = notebookUrl;
+      notebookStatus.textContent = "Notebook saved.";
+    } catch { notebookStatus.textContent = "Could not save the notebook."; }
+  });
 
   const apiMode = document.getElementById("deepseek-mode");
   const apiModel = document.getElementById("deepseek-model");

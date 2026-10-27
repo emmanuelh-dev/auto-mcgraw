@@ -42,8 +42,8 @@
     }
   }
 
-  async function findByMatch(match) {
-    const found = await chrome.tabs.query({ url: match });
+  async function findByMatch(match, predicate = () => true) {
+    const found = (await chrome.tabs.query({ url: match })).filter(predicate);
     found.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
     return found[0] || null;
   }
