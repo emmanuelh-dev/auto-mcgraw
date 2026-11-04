@@ -3,10 +3,11 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 
-function setup({ progress = '20 of 20', confirmation = true, pause = false, submitted = true, worksheet = false, next = false, changesQuestion = true, loadingPolls = 0 } = {}) {
+function setup({ progress = '20 of 20', confirmation = true, pause = false, submitted = true, worksheet = false, next = false, changesQuestion = true, loadingPolls = 0, requiredInfo = null } = {}) {
   let step;
   let stage = 'question';
   const actions = [];
+  const questions = [];
   const button = (name, click) => ({
     textContent: name, disabled: false,
     getClientRects: () => [1], closest: () => null,
@@ -20,6 +21,7 @@ function setup({ progress = '20 of 20', confirmation = true, pause = false, subm
   const hiddenNext = { ...nextButton, getClientRects: () => [], click: () => actions.push('hidden Next') };
   const document = {
     querySelector(selector) {
+      if (selector === '.question-wrap .note--required-info') return requiredInfo;
       if (selector === '.question, .worksheet__main' && loadingPolls > 0) { loadingPolls--; return null; }
       if (selector === '.question, .worksheet__main') return { textContent: stage === 'next' ? 'Next question' : 'Question' };
       if (selector === '.answers-wrap.multiple-choice') return worksheet ? null : {};
@@ -43,14 +45,14 @@ function setup({ progress = '20 of 20', confirmation = true, pause = false, subm
       settings: { DEFAULTS: { pauseBeforeSubmit: pause }, subscribe() {}, load: async () => ({ pauseBeforeSubmit: pause }) },
       automation: { create: (options) => { step = options.step; return session; } },
       toolbar: { create: () => ({ render() {} }), keepMounted() {} },
-      text: { readableText: () => 'Question', flattenAnswerValues: () => ['choice'], resolveChoiceIndices: () => [0] },
+      text: { readableText: (element) => element.textContent || 'Question', flattenAnswerValues: () => ['choice'], resolveChoiceIndices: () => [0] },
       eztoGrouping: { answerValues: () => ['Group -> choice'], read: () => worksheet, options: () => ({ prompts: ['Group'], choices: ['choice'], multiple: true }), apply: async () => { actions.push('group'); return true; } },
       dom: { isEnabled: (element) => !element.disabled },
       assignmentQueue: { changed() {}, attach() {}, returnToAssignments: async (element) => element.click() },
     },
   });
-  return { actions, step: () => step({
-    ask: async () => ({ answer: 'choice' }), delay: async () => {},
+  return { actions, questions, step: () => step({
+    ask: async (question) => { questions.push(question); return { answer: 'choice' }; }, delay: async () => {},
     waitFor: async (get) => {
       for (let attempt = 0; attempt < 5; attempt++) {
         const value = get();
@@ -179,4 +181,21 @@ test('waits for a delayed question before answering and advancing', async () => 
   const fixture = setup({ loadingPolls: 3, next: true, progress: '6 of 25' });
   await fixture.step();
   assert.deepEqual(fixture.actions, ['answer', 'Next']);
+});
+
+test('sends required case information with numbered paragraphs to the AI', async () => {
+  const item = { tagName: 'LI', hasAttribute: () => false,
+    prepend(value) { this.prefix = value; } };
+  let removed = false;
+  const clone = {
+    querySelectorAll: (selector) => selector === 'ol'
+      ? [{ getAttribute: () => '4', children: [item] }]
+      : [{ remove() { removed = true; } }],
+    get textContent() { return `${item.prefix}Please resend my files.`; },
+  };
+  const fixture = setup({ requiredInfo: { cloneNode: () => clone } });
+  await fixture.step();
+  assert.equal(removed, true);
+  assert.equal(fixture.questions[0].question, '4. Please resend my files.\n\nQuestion');
+  assert.deepEqual(Array.from(fixture.questions[0].options), ['choice']);
 });

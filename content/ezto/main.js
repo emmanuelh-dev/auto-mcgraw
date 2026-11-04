@@ -55,9 +55,25 @@
       options = ["True", "False"];
     }
 
+    const requiredInfo = document.querySelector(".question-wrap .note--required-info");
+    let context = "";
+    if (requiredInfo) {
+      const clone = requiredInfo.cloneNode(true);
+      clone.querySelectorAll(".button--skip-to-question").forEach((link) => link.remove());
+      clone.querySelectorAll("ol").forEach((list) => {
+        let number = Number(list.getAttribute("start") || 1);
+        Array.from(list.children).forEach((item) => {
+          if (item.tagName !== "LI") return;
+          if (item.hasAttribute("value")) number = Number(item.getAttribute("value"));
+          item.prepend(`${number++}. `);
+        });
+      });
+      context = text.readableText(clone);
+    }
+
     return {
       type,
-      question: readQuestionText(questionElement, type),
+      question: [context, readQuestionText(questionElement, type)].filter(Boolean).join("\n\n"),
       options,
       previousCorrection: null,
     };
